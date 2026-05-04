@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ClipboardCheck, 
@@ -15,6 +15,8 @@ import {
   ArrowLeft,
   Loader2
 } from "lucide-react";
+import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, getDocFromServer, onSnapshot, query, serverTimestamp } from "firebase/firestore";
+import { db } from "./firebase";
 
 const departmentData: Record<string, string[]> = {
   "외주구매팀": ["조상현"],
@@ -68,16 +70,32 @@ export default function App() {
 
   const fetchEntries = async () => {
     try {
-      const res = await fetch("/api/entries");
-      const data = await res.json();
+      const q = query(collection(db, "entries"));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ApplicationEntry[];
       setEntries(data);
     } catch (error) {
       console.error("Failed to fetch entries", error);
     }
   };
 
-  React.useEffect(() => {
-    fetchEntries().finally(() => setInitialFetchDone(true));
+  useEffect(() => {
+    const q = query(collection(db, "entries"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ApplicationEntry[];
+      setEntries(data);
+    }, (error) => {
+      console.error("Firestore onSnapshot Error:", error);
+    });
+
+    setInitialFetchDone(true);
+    return () => unsubscribe();
   }, []);
 
   const getRemainingSeats = (targetDate: string) => {
@@ -94,24 +112,25 @@ export default function App() {
       return;
     }
 
+    if (getRemainingSeats(date) <= 0) {
+      alert("해당 차수는 마감이 완료되었습니다.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch("/api/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ department, name, date }),
+      await addDoc(collection(db, "entries"), {
+        department,
+        name,
+        date,
+        createdAt: new Date().toISOString()
       });
-      if (res.ok) {
-        alert("신청이 완료되었습니다.");
-        setDepartment("");
-        setName("");
-        setDate("");
-        fetchEntries(); // Update available seats
-      } else {
-        const err = await res.json();
-        alert(err.error || "신청 중 오류가 발생했습니다.");
-      }
+      alert("신청이 완료되었습니다.");
+      setDepartment("");
+      setName("");
+      setDate("");
     } catch (error) {
+      console.error("신청 중 오류가 발생했습니다.", error);
       alert("신청 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
@@ -124,7 +143,6 @@ export default function App() {
       setIsAdmin(true);
       setShowAdminLogin(false);
       setAdminPassword("");
-      fetchEntries();
     } else {
       alert("비밀번호가 틀렸습니다.");
       setAdminPassword("");
@@ -133,8 +151,7 @@ export default function App() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/entries/${id}`, { method: "DELETE" });
-      if (res.ok) fetchEntries();
+       await deleteDoc(doc(db, "entries", id));
     } catch (error) {
       console.error("삭제 중 오류가 발생했습니다.", error);
     }
@@ -148,17 +165,24 @@ export default function App() {
   };
 
   const handleUpdate = async (id: string) => {
-    try {
-      const res = await fetch(`/api/entries/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ department: editDept, name: editName, date: editDate }),
-      });
-      if (res.ok) {
-        setEditingId(null);
-        fetchEntries();
+    // If date changed, check limit again
+    const entryToUpdate = entries.find(e => e.id === id);
+    if (entryToUpdate && entryToUpdate.date !== editDate) {
+      if (getRemainingSeats(editDate) <= 0) {
+        alert("해당 차수는 마감이 완료되었습니다.");
+        return;
       }
+    }
+
+    try {
+      await updateDoc(doc(db, "entries", id), {
+        department: editDept,
+        name: editName,
+        date: editDate
+      });
+      setEditingId(null);
     } catch (error) {
+       console.error("수정 중 오류가 발생했습니다.", error);
       alert("수정 중 오류가 발생했습니다.");
     }
   };

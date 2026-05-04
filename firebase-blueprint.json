@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "ApplicationEntry": {
+      "title": "Application Entry",
+      "description": "Application entry for safety training.",
+      "type": "object",
+      "properties": {
+        "department": { "type": "string", "description": "The department of the applicant" },
+        "name": { "type": "string", "description": "The name of the applicant" },
+        "date": { "type": "string", "description": "The target date of training" },
+        "createdAt": { "type": "string", "description": "Creation timestamp in ISO string" }
+      },
+      "required": ["department", "name", "date", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/entries/{entryId}": {
+      "schema": { "$ref": "#/entities/ApplicationEntry" },
+      "description": "Stores individual application entries."
+    }
+  }
+}
