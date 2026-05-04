@@ -1,0 +1,6 @@
+{
+  "name": "체험형 안전 교육 신청 시스템",
+  "description": "부서명, 이름, 참석 일자를 입력하여 안전 교육을 신청하고, 관리자 모드에서 데이터를 관리할 수 있는 서비스입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
