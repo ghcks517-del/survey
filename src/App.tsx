@@ -51,6 +51,7 @@ export default function App() {
   const [entries, setEntries] = useState<ApplicationEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const DATE_LIMITS: Record<string, number> = {
     "(1차수) 5월 18일(월) 14시 ~ 16시": 22,
@@ -96,11 +97,18 @@ export default function App() {
         ...doc.data()
       })) as ApplicationEntry[];
       setEntries(data);
+      setInitialFetchDone(true);
+      setErrorMessage(null);
     }, (error) => {
       console.error("Firestore onSnapshot Error:", error);
+      if (error.message.toLowerCase().includes("quota")) {
+        setErrorMessage("일일 데이터 사용량이 초과되었습니다. 내일 다시 시도해주세요.");
+      } else {
+        setErrorMessage("데이터를 불러오는 중 오류가 발생했습니다. 페이지를 새로고침 해주세요.");
+      }
+      setInitialFetchDone(true);
     });
 
-    setInitialFetchDone(true);
     return () => unsubscribe();
   }, []);
 
@@ -257,6 +265,44 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 relative overflow-y-auto bg-[#f8f8f8]">
           <AnimatePresence mode="wait">
+            {!initialFetchDone ? (
+              <motion.div 
+                key="loading" 
+                className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-30"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-12 h-12 text-[#f97316] animate-spin" />
+                  <p className="font-black text-xs tracking-widest uppercase text-zinc-400">Loading Data...</p>
+                </div>
+              </motion.div>
+            ) : errorMessage ? (
+              <motion.div 
+                key="error" 
+                className="absolute inset-0 flex items-center justify-center p-8 bg-white z-40"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="max-w-xs text-center">
+                  <div className="inline-block p-4 bg-red-100 mb-6 rounded-full">
+                    <X className="w-8 h-8 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-black mb-4">Connection Issue</h3>
+                  <p className="text-zinc-500 font-medium text-sm mb-8 leading-relaxed">
+                    {errorMessage}
+                  </p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="w-full py-4 bg-black text-white font-black uppercase text-xs tracking-widest hover:bg-zinc-800 transition-all outline-none"
+                  >
+                    Try Refreshing
+                  </button>
+                </div>
+              </motion.div>
+            ) : null}
+
             {!showAdminLogin && !isAdmin && (
               <motion.div 
                 key="apply-form"
