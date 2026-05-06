@@ -2,21 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isValidApplicationEntry(data) {
-      return data.keys().hasAll(['department', 'name', 'date', 'createdAt']) &&
-             data.keys().size() == 4 &&
+      return data.keys().hasAll(['department', 'name', 'date', 'vehicleModel', 'vehicleNumber', 'createdAt']) &&
+             data.keys().size() == 6 &&
              data.department is string && data.department.size() > 0 && data.department.size() <= 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.date is string && data.date.size() > 0 && data.date.size() <= 100 &&
+             data.vehicleModel is string && data.vehicleModel.size() <= 100 &&
+             data.vehicleNumber is string && data.vehicleNumber.size() <= 100 &&
              data.createdAt is string && data.createdAt.size() > 0 && data.createdAt.size() <= 100;
     }
 
     match /entries/{entryId} {
       allow read: if true; // Public list
       allow create: if isValidApplicationEntry(request.resource.data);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['department', 'name', 'date']) &&
-                       request.resource.data.department is string && request.resource.data.department.size() > 0 && request.resource.data.department.size() <= 100 &&
-                       request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
-                       request.resource.data.date is string && request.resource.data.date.size() > 0 && request.resource.data.date.size() <= 100;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['department', 'name', 'date', 'vehicleModel', 'vehicleNumber']) &&
+                       request.resource.data.department is string && request.resource.data.department.size() > 0 && 
+                       request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                       request.resource.data.date is string && request.resource.data.date.size() > 0;
       allow delete: if true; // Admin deletes
     }
 

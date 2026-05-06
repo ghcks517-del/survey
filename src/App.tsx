@@ -39,6 +39,8 @@ interface ApplicationEntry {
   department: string;
   name: string;
   date: string;
+  vehicleModel: string;
+  vehicleNumber: string;
   createdAt: string;
 }
 
@@ -61,12 +63,16 @@ export default function App() {
   const [department, setDepartment] = useState("");
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [vehicleModel, setVehicleModel] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
   
   // Edit states
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDept, setEditDept] = useState("");
   const [editName, setEditName] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editVehicleModel, setEditVehicleModel] = useState("");
+  const [editVehicleNumber, setEditVehicleNumber] = useState("");
 
   const fetchEntries = async () => {
     try {
@@ -107,7 +113,7 @@ export default function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!department || !name || !date) {
+    if (!department || !name || !date || !vehicleModel || !vehicleNumber) {
       alert("모든 항목을 입력해주세요.");
       return;
     }
@@ -123,12 +129,16 @@ export default function App() {
         department,
         name,
         date,
+        vehicleModel,
+        vehicleNumber,
         createdAt: new Date().toISOString()
       });
       alert("신청이 완료되었습니다.");
       setDepartment("");
       setName("");
       setDate("");
+      setVehicleModel("");
+      setVehicleNumber("");
     } catch (error) {
       console.error("신청 중 오류가 발생했습니다.", error);
       alert("신청 중 오류가 발생했습니다.");
@@ -162,6 +172,8 @@ export default function App() {
     setEditDept(entry.department);
     setEditName(entry.name);
     setEditDate(entry.date);
+    setEditVehicleModel(entry.vehicleModel || "");
+    setEditVehicleNumber(entry.vehicleNumber || "");
   };
 
   const handleUpdate = async (id: string) => {
@@ -178,7 +190,9 @@ export default function App() {
       await updateDoc(doc(db, "entries", id), {
         department: editDept,
         name: editName,
-        date: editDate
+        date: editDate,
+        vehicleModel: editVehicleModel,
+        vehicleNumber: editVehicleNumber
       });
       setEditingId(null);
     } catch (error) {
@@ -291,7 +305,7 @@ export default function App() {
                         className="w-full bg-transparent text-xl font-black outline-none appearance-none cursor-pointer text-[#111] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="" disabled className="text-base font-medium text-zinc-400">이름을 선택하세요</option>
-                        {department && departmentData[department].map(n => (
+                        {department && departmentData[department].filter(n => !entries.some(e => e.name === n)).map(n => (
                           <option key={n} value={n} className="text-base font-medium text-zinc-800">{n}</option>
                         ))}
                       </select>
@@ -312,12 +326,41 @@ export default function App() {
                           const remaining = getRemainingSeats(d);
                           const isFull = remaining === 0;
                           return (
-                            <option key={d} value={d} disabled={isFull} className={`text-base font-medium ${isFull ? 'text-zinc-400' : 'text-zinc-800'}`}>
-                              {d}
+                            <option key={d} value={d} disabled={isFull} className={`text-base font-medium ${isFull ? 'text-zinc-300' : 'text-zinc-800'}`}>
+                              {d} {isFull ? '(인원 초과로 접수마감)' : ''}
                             </option>
                           );
                         })}
                       </select>
+                    </div>
+
+                    {/* Vehicle Info */}
+                    <div className="space-y-6 pt-4">
+                       <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#f97316] mb-2">
+                        04. 차량 정보
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-8">
+                        <div className="flex-1 group border-b-2 border-black pb-3 transition-all focus-within:border-[#f97316]">
+                          <label className="block text-[9px] font-black text-zinc-400 mb-1">차량명</label>
+                          <input 
+                            type="text"
+                            placeholder="예: 그랜저"
+                            value={vehicleModel}
+                            onChange={(e) => setVehicleModel(e.target.value)}
+                            className="w-full bg-transparent text-lg font-bold outline-none placeholder:text-zinc-200"
+                          />
+                        </div>
+                        <div className="flex-1 group border-b-2 border-black pb-3 transition-all focus-within:border-[#f97316]">
+                          <label className="block text-[9px] font-black text-zinc-400 mb-1">차량번호</label>
+                          <input 
+                            type="text"
+                            placeholder="예: 12가 3456"
+                            value={vehicleNumber}
+                            onChange={(e) => setVehicleNumber(e.target.value)}
+                            className="w-full bg-transparent text-lg font-bold outline-none placeholder:text-zinc-200"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -435,6 +478,7 @@ export default function App() {
                         <th className="px-3 py-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">No.</th>
                         <th className="px-3 py-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Dept</th>
                         <th className="px-3 py-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Name</th>
+                        <th className="px-3 py-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Vehicle</th>
                         <th className="px-3 py-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
                         <th className="px-3 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-right whitespace-nowrap">Actions</th>
                       </tr>
@@ -442,7 +486,7 @@ export default function App() {
                     <tbody className="divide-y divide-black">
                       {entries.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-12 text-center">
+                          <td colSpan={6} className="px-4 py-12 text-center">
                             <p className="text-lg font-black text-zinc-300 italic uppercase">Database Empty</p>
                           </td>
                         </tr>
@@ -485,6 +529,29 @@ export default function App() {
                                   ))}
                                 </select>
                               ) : entry.name}
+                            </td>
+                            <td className="px-3 py-4 whitespace-nowrap">
+                              {editingId === entry.id ? (
+                                <div className="flex flex-col gap-1">
+                                  <input 
+                                    value={editVehicleModel}
+                                    onChange={(e) => setEditVehicleModel(e.target.value)}
+                                    placeholder="차량명"
+                                    className="text-[10px] border-b border-black outline-none bg-transparent"
+                                  />
+                                  <input 
+                                    value={editVehicleNumber}
+                                    onChange={(e) => setEditVehicleNumber(e.target.value)}
+                                    placeholder="차량번호"
+                                    className="text-[10px] border-b border-black outline-none bg-transparent"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-zinc-500 font-mono">
+                                  <div>{entry.vehicleModel}</div>
+                                  <div className="font-bold text-[#111]">{entry.vehicleNumber}</div>
+                                </div>
+                              )}
                             </td>
                             <td className="px-3 py-4 font-mono font-bold tracking-tighter text-xs whitespace-nowrap">
                               {editingId === entry.id ? (
