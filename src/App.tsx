@@ -56,7 +56,7 @@ export default function App() {
   const DATE_LIMITS: Record<string, number> = {
     "(1차수) 5월 18일(월) 14시 ~ 16시": 19,
     "(2차수) 6월 4일(목) 14시 ~ 16시": 20,
-    "(3차수) 6월 5일(금) 14시 ~ 16시": 14,
+    "(3차수) 6월 5일(금) 14시 ~ 16시": 13,
   };
   const DATES = Object.keys(DATE_LIMITS);
   
